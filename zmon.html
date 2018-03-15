@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="css/bootstrap-select.min.css" rel="stylesheet">
+</head>
+<body>
+<select id="host" class="selectpicker" >
+</select>
+
+<select id="item" class="selectpicker">
+        <option value="memory">内存</option>
+        <option value="disk">磁盘</option>
+        <option value="network">网卡</option>
+        <option value="app">应用程序</option>
+</select>
+
+<select id="item" class="selectpicker">
+    <option value="memory">内存</option>
+    <option value="disk">磁盘</option>
+    <option value="network">网卡</option>
+    <option value="app">应用程序</option>
+</select>
+
+<canvas></canvas>
+
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/bootstrap-select.min.js"></script>
+<script src="js/zmon.js"></script>
+<script src="js/jqzabbix.js"></script>
+<script>
+    $(document).ready(function () {
+        var options = {};
+        options.url = api_url;
+        options.username = api_admin;
+        options.password = api_pass;
+        var api= new $.jqzabbix(options);
+        api.userLogin(null,function () {
+            api.sendAjaxRequest("host.get",{"output":["hostid","host"]},function (data,status) {
+                data.result.forEach(function (host, index) {
+                    $("#host").append( "<option value='" +host.hostid + "'>" + host.host + "</option>"  );
+                });
+                var selctedhost = $("#host").find("option:selected").val();
+                api.sendAjaxRequest("item.get",{},function (data.status) {
+                    $("#item")
+                });
+                $("#host").selectpicker('refresh');
+                // $("#host").selectpicker('render');
+            })
+        });
+        $('.selectpicker').change(function () {
+            var slecteditem = $(this).find("option:selected").val();
+            alert(slecteditem);
+        });
+
+
+    });
+</script>
+</body>
+</html>
