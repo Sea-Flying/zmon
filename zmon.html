@@ -11,22 +11,34 @@
     <link href="css/bootstrap-select.min.css" rel="stylesheet">
 </head>
 <body>
+
 <select id="host" class="selectpicker" >
 </select>
 
-<select id="item" class="selectpicker">
-        <option value="memory">内存</option>
-        <option value="disk">磁盘</option>
-        <option value="network">网卡</option>
-        <option value="app">应用程序</option>
+<select id="item_1" class="selectpicker">
+        <option value="system.cpu.">CPU</option>
+        <option value="vm.memory.">内存</option>
+        <option value="vfs.fs.">磁盘</option>
+        <option value="net.if.total">网卡</option>
+        <option value="perf_counter">应用程序</option>
 </select>
 
-<select id="item" class="selectpicker">
-    <option value="memory">内存</option>
-    <option value="disk">磁盘</option>
-    <option value="network">网卡</option>
-    <option value="app">应用程序</option>
+<select id="item_2" class="selectpicker">
+    <option value="">占用率</option>
 </select>
+
+<input />
+
+
+<select id="period_unit" class="selectpicker">
+    <option value="min">分钟</option>
+    <option value="hour">小时</option>
+    <option value="day">天</option>
+    <option value="week">周</option>
+    <option value="month">月</option>
+</select>
+
+<button id="query" >Query</button>
 
 <canvas></canvas>
 
@@ -36,6 +48,7 @@
 <script src="js/bootstrap-select.min.js"></script>
 <script src="js/zmon.js"></script>
 <script src="js/jqzabbix.js"></script>
+<script src="js/js.cookie-2.2.0.min.js"></script>
 <script>
     $(document).ready(function () {
         var options = {};
@@ -44,23 +57,62 @@
         options.password = api_pass;
         var api= new $.jqzabbix(options);
         api.userLogin(null,function () {
-            api.sendAjaxRequest("host.get",{"output":["hostid","host"]},function (data,status) {
+            api.sendAjaxRequest("host.get",params_host_get,function (data,status) {
                 data.result.forEach(function (host, index) {
                     $("#host").append( "<option value='" +host.hostid + "'>" + host.host + "</option>"  );
                 });
-                var selctedhost = $("#host").find("option:selected").val();
-                api.sendAjaxRequest("item.get",{},function (data.status) {
-                    $("#item")
+                selctedhost = $("#host").find("option:selected").val();
+                selecteditem_1 = $("#item_1").find("option:selected").val();
+                selecteditem_2 = $("#item_2").find("option:selected").val();
+                api.sendAjaxRequest("item.get",wrap_item_params(params_item_get,selctedhost,selecteditem_1,selecteditem_2),function (data.status) {
+                       Cookies.set('selecteditem',data.result.itemid);
                 });
                 $("#host").selectpicker('refresh');
                 // $("#host").selectpicker('render');
             })
         });
-        $('.selectpicker').change(function () {
-            var slecteditem = $(this).find("option:selected").val();
-            alert(slecteditem);
+
+        $('#host').change(function () {
+            selctedhost = $(this).find("option:selected").val();
         });
 
+        $('#item_1').change(function () {
+            selecteditem_1=  $(this).find("option:selected").val();
+            $('#item_2').deleteall()
+            switch (selecteditem_1) {
+                case "":
+                    $('#item_2').append("  ");
+                    break;
+                case "":
+                    $('#item_2').append("  ");
+                    break;
+                case "":
+                    $('#item_2').append("  ");
+                    break;
+                case "":
+                    $('#item_2').append("  ");
+                    break;
+                case "":
+                    $('#item_2').append("  ");
+                    break;
+            }
+        });
+
+        $('#item_2').change(function () {
+            selecteditem_2 = $(this).find("option:selected").val();
+        });
+
+        $('#query').onclick(function () {
+            wrap_histroy_param();
+            api.sendAjaxRequest("history.get",params_history_get,function (data,status) {
+                
+            });
+        });
+
+        var selctedhost = $("#host").find("option:selected").val();
+        api.sendAjaxRequest("item.get",{"hostids":selctedhost,"output":["itemid","key_","name"],"application":"Wonders"},function (data.status) {
+            data.result.
+        });
 
     });
 </script>

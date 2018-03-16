@@ -1,6 +1,21 @@
 var api_url = "http://10.1.62.243/zabbix/api_jsonrpc.php";
 var api_admin = "admin";
 var api_pass = "zabbix";
+var selectedhost = "";
+var selecteditem_1 = "";
+var selecteditem_2 = "";
+var params_host_get = {"output":["hostid","host"]};
+var params_item_get = {"hostids":"","output":["itemid","key_","name"],"application":"Wonders","search":{"key_":""}};
+var item_list = {
+
+};
+
+function wrap_item_params(origin,host,item_1,item_2) {
+    origin.hostids = host;
+    origin.search.key_ = item_1 + item_2;
+    return origin;
+}
+
 var api_methods = {
 
     action: {
