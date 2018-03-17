@@ -6,8 +6,19 @@ var selecteditem_1 = "";
 var selecteditem_2 = "";
 var params_host_get = {"output":["hostid","host"]};
 var params_item_get = {"hostids":"","output":["itemid","key_","name"],"application":"Wonders","search":{"key_":""}};
-var item_list = {
-
+var item2_list = {
+'system.cpu.' :
+    '<option value="c">使用率</option>',
+ 'vm.memory.':
+    '<option value="a">占用率</option>' +
+    '<option value="b">占用量</option>',
+ 'vfs.fs.':
+    '<option value="d">c盘百分比</option>'+
+    '<option value="e">d盘百分比</option>',
+ 'net.if.total':
+    '<option value="f">流量</option>',
+ 'perf_counter':
+    '<option value="g">Chrome使用时长</option>'
 };
 
 function wrap_item_params(origin,host,item_1,item_2) {
