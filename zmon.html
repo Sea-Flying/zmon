@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
-    <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -24,18 +23,18 @@
 </select>
 
 <select id="item_2" class="selectpicker">
-    <option value="">占用率</option>
+    <option value="load[all,avg1]">使用率</option>
 </select>
 
-<input />
+<input id="time_value" />
 
 
-<select id="period_unit" class="selectpicker">
-    <option value="min">分钟</option>
-    <option value="hour">小时</option>
-    <option value="day">天</option>
-    <option value="week">周</option>
-    <option value="month">月</option>
+<select id="time_unit" class="selectpicker">
+    <option value="60">分钟</option>
+    <option value="3600">小时</option>
+    <option value="86400">天</option>
+    <option value="604800">周</option>
+    <option value="7257600">月</option>
 </select>
 
 <button id="query" >Query</button>
@@ -49,6 +48,7 @@
 <script src="js/zmon.js"></script>
 <script src="js/jqzabbix.js"></script>
 <script src="js/js.cookie-2.2.0.min.js"></script>
+<script src="js/Chart.bundle.min.js"></script>
 <script>
     $(document).ready(function () {
         var options = {};
@@ -61,57 +61,88 @@
                 data.result.forEach(function (host, index) {
                     $("#host").append( "<option value='" +host.hostid + "'>" + host.host + "</option>"  );
                 });
-                selctedhost = $("#host").find("option:selected").val();
+                $("#host").selectpicker('refresh');
+                selectedhost = $("#host").find("option:selected").val();
                 selecteditem_1 = $("#item_1").find("option:selected").val();
                 selecteditem_2 = $("#item_2").find("option:selected").val();
-                api.sendAjaxRequest("item.get",wrap_item_params(params_item_get,selctedhost,selecteditem_1,selecteditem_2),function (data.status) {
-                       Cookies.set('selecteditem',data.result.itemid);
+                api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                    Cookies.set('selecteditem',data.result[0].itemid);
                 });
                 $("#host").selectpicker('refresh');
                 // $("#host").selectpicker('render');
             })
         });
 
-        $('#host').change(function () {
-            selctedhost = $(this).find("option:selected").val();
-        });
-
         $('#item_1').change(function () {
             selecteditem_1=  $(this).find("option:selected").val();
-            $('#item_2').deleteall()
+            $('#item_2').empty();
             switch (selecteditem_1) {
-                case "":
-                    $('#item_2').append("  ");
+                case "system.cpu.":
+                    $('#item_2').append(item2_list['system.cpu.']);
                     break;
-                case "":
-                    $('#item_2').append("  ");
+                case "vm.memory.":
+                    $('#item_2').append(item2_list['vm.memory.']);
                     break;
-                case "":
-                    $('#item_2').append("  ");
+                case "vfs.fs.":
+                    $('#item_2').append(item2_list['vfs.fs.']);
                     break;
-                case "":
-                    $('#item_2').append("  ");
+                case "net.if.total":
+                    $('#item_2').append(item2_list['net.if.total']);
                     break;
-                case "":
-                    $('#item_2').append("  ");
+                case "perf_counter":
+                    $('#item_2').append(item2_list["perf_counter"]);
                     break;
             }
+            $(".selectpicker").selectpicker('refresh');
+            selecteditem_2=  $('#item_2').find("option:selected").val();
+            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                Cookies.set('selecteditem',data.result[0].itemid);
+            });
+            // $("#host").selectpicker('render');
         });
 
         $('#item_2').change(function () {
-            selecteditem_2 = $(this).find("option:selected").val();
-        });
-
-        $('#query').onclick(function () {
-            wrap_histroy_param();
-            api.sendAjaxRequest("history.get",params_history_get,function (data,status) {
-                
+            selecteditem_2=  $(this).find("option:selected").val();
+            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                Cookies.set('selecteditem',data.result[0].itemid);
             });
         });
 
-        var selctedhost = $("#host").find("option:selected").val();
-        api.sendAjaxRequest("item.get",{"hostids":selctedhost,"output":["itemid","key_","name"],"application":"Wonders"},function (data.status) {
-            data.result.
+        $('#query').click(function () {
+            if (selecteditem_2 == "size[used]" || selecteditem_2 == "[Realtek PCIe FE Family Controller]") {
+                type = 3;
+            }
+            else {
+                type = 0;
+            }
+            c_line_data.datasets[0].label= $('#item_1').find("option:selected").html() + $('#item_2').find("option:selected").html();
+            var current_time = Math.round(new Date().getTime()/1000);
+            var time_value = $('#time_value').val();
+            var time_unit = $('#time_unit').val();
+            var past_time = current_time - time_value * time_unit ;
+            api.sendAjaxRequest("history.get", wrap_histroy_params(params_history_get,Cookies.get('selecteditem'),type,past_time) ,function (data,status) {
+                console.log(data);
+                    len = data.result.length;
+                    if(len > 20){
+                        step = len / 20;
+                    }
+                    indexs = range(0,len,step);
+                    len = indexs.length;
+                    indexs.forEach(function (index) {
+                        i = Math.floor(index);
+                        c_line_data.labels.push(data.result[i].clock);
+                        c_line_data.datasets[0].data.push(data.result[i].value);
+                    });
+            });
+        });
+
+        $('#host').change(function () {
+            selectedhost = $(this).find("option:selected").val();
+            selecteditem_1=  $('#item_1').find("option:selected").val();
+            selecteditem_2=  $('#item_2').find("option:selected").val();
+            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                Cookies.set('selecteditem',data.result[0].itemid);
+            });
         });
 
     });

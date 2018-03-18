@@ -32,6 +32,8 @@
 
 <input />
 
+<canvas id="myChart" width="400" height="400"></canvas>
+
 
 <select id="period_unit" class="selectpicker">
     <option value="min">分钟</option>
@@ -43,7 +45,6 @@
 
 <button id="query" >Query</button>
 
-<canvas></canvas>
 
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
 <script src="js/jquery.min.js"></script>
@@ -52,22 +53,18 @@
 <script src="js/zmon.js"></script>
 <script src="js/jqzabbix.js"></script>
 <script src="js/js.cookie-2.2.0.min.js"></script>
+<script src="js/Chart.bundle.min.js"></script>
 <script>
     $(document).ready(function () {
 
-
         selctedhost = $("#host").find("option:selected").val();
-
-
-        $('#host').change(function () {
-            selctedhost = $(this).find("option:selected").val();
-        });
+        selecteditem_1 = $("#item_1").find("option:selected").val();
+        selecteditem_2 = $("#item_2").find("option:selected").val();
+        Cookies.set('selecteditem',selecteditem_1+selecteditem_2);
 
         $('#item_1').change(function () {
             selecteditem_1=  $(this).find("option:selected").val();
-            $('#item_2 >option').each(function (i) {
-                i.remove();
-            });
+            $('#item_2 ').empty();
             switch (selecteditem_1) {
                 case "system.cpu.":
                     $('#item_2').append(item2_list['system.cpu.']);
@@ -89,22 +86,49 @@
             // $("#host").selectpicker('render');
         });
 
-        $('#item_2').change(function () {
-            selecteditem_2 = $(this).find("option:selected").val();
+        $('.selectpicker').change(function () {
+            selctedhost = $("#host").find("option:selected").val();
+            selecteditem_1 = $("#item_1").find("option:selected").val();
+            selecteditem_2 = $("#item_2").find("option:selected").val();
+            Cookies.set('selecteditem',selecteditem_1+selecteditem_2);
         });
 
-        selecteditem_1 = $("#item_1").find("option:selected").val();
-        selecteditem_2 = $("#item_2").find("option:selected").val();
-        Cookies.set('selecteditem',selecteditem_1+selecteditem_2);
 
-        $('#query').onclick(function () {
+        $('#query').click(function () {
             wrap_histroy_param();
             api.sendAjaxRequest("history.get",params_history_get,function (data,status) {
                 
             });
         });
 
-
+        var ctx = $("#myChart").get(0).getContext("2d");
+        // This will get the first returned node in the jQuery collection.
+        var myLineChart = new Chart(ctx).Line(c_data);
+        var c_data = {
+            labels: ["January", "February", "March", "April", "May", "June", "July"],
+            datasets: [
+                {
+                    label: "My First dataset",
+                    fillColor: "rgba(220,220,220,0.2)",
+                    strokeColor: "rgba(220,220,220,1)",
+                    pointColor: "rgba(220,220,220,1)",
+                    pointStrokeColor: "#fff",
+                    pointHighlightFill: "#fff",
+                    pointHighlightStroke: "rgba(220,220,220,1)",
+                    data: [65, 59, 80, 81, 56, 55, 40]
+                },
+                {
+                    label: "My Second dataset",
+                    fillColor: "rgba(151,187,205,0.2)",
+                    strokeColor: "rgba(151,187,205,1)",
+                    pointColor: "rgba(151,187,205,1)",
+                    pointStrokeColor: "#fff",
+                    pointHighlightFill: "#fff",
+                    pointHighlightStroke: "rgba(151,187,205,1)",
+                    data: [28, 48, 40, 19, 86, 27, 90]
+                }
+            ]
+        };
 
     });
 </script>
