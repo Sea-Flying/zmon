@@ -37,9 +37,9 @@
     <option value="7257600">月</option>
 </select>
 
-<button id="query" >Query</button>
+<button id="query">Query</button>
 
-<canvas></canvas>
+<canvas id="chart" ></canvas>
 
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
 <script src="js/jquery.min.js"></script>
@@ -55,6 +55,12 @@
         options.url = api_url;
         options.username = api_admin;
         options.password = api_pass;
+        var ctx = $("#chart").get(0).getContext("2d");
+        var theChart = new Chart(ctx, {
+            type: 'line',
+            data: c_data_0,
+            options: c_line_options
+        });
         var api= new $.jqzabbix(options);
         api.userLogin(null,function () {
             api.sendAjaxRequest("host.get",params_host_get,function (data,status) {
@@ -71,6 +77,15 @@
                 $("#host").selectpicker('refresh');
                 // $("#host").selectpicker('render');
             })
+        });
+
+        $('#host').change(function () {
+            selectedhost = $(this).find("option:selected").val();
+            selecteditem_1=  $('#item_1').find("option:selected").val();
+            selecteditem_2=  $('#item_2').find("option:selected").val();
+            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                Cookies.set('selecteditem',data.result[0].itemid);
+            });
         });
 
         $('#item_1').change(function () {
@@ -116,34 +131,36 @@
                 type = 0;
             }
             c_line_data.datasets[0].label= $('#item_1').find("option:selected").html() + $('#item_2').find("option:selected").html();
-            var current_time = Math.round(new Date().getTime()/1000);
+            var current_time = Math.round(new Date().getTime()/1000) - 780;
             var time_value = $('#time_value').val();
             var time_unit = $('#time_unit').val();
             var past_time = current_time - time_value * time_unit ;
             api.sendAjaxRequest("history.get", wrap_histroy_params(params_history_get,Cookies.get('selecteditem'),type,past_time) ,function (data,status) {
-                console.log(data);
-                    len = data.result.length;
-                    if(len > 20){
-                        step = len / 20;
-                    }
-                    indexs = range(0,len,step);
-                    len = indexs.length;
-                    indexs.forEach(function (index) {
-                        i = Math.floor(index);
-                        c_line_data.labels.push(data.result[i].clock);
-                        c_line_data.datasets[0].data.push(data.result[i].value);
-                    });
+                //console.log(data);
+                var len = data.result.length;
+                var step = 1;
+                if(len > 20){
+                    step = len / 20;
+                }
+                indexs = range(0,len,step);
+                console.log(indexs);
+                len = indexs.length;
+                var c_line_data_t={};
+                $.extend(true, c_line_data_t, c_line_data) ;
+                indexs.forEach(function (index) {
+                    i = Math.floor(index);
+                    c_line_data_t.labels.push(timestampToTime(data.result[i].clock));
+                    console.log(data.result[i].value);
+                    c_line_data_t.datasets[0].data.push(data.result[i].value);
+                });
+                theChart.type= 'line';
+                theChart.data= c_line_data_t;
+                theChart.options = c_line_options;
+                theChart.update();
             });
         });
 
-        $('#host').change(function () {
-            selectedhost = $(this).find("option:selected").val();
-            selecteditem_1=  $('#item_1').find("option:selected").val();
-            selecteditem_2=  $('#item_2').find("option:selected").val();
-            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
-                Cookies.set('selecteditem',data.result[0].itemid);
-            });
-        });
+
 
     });
 </script>
