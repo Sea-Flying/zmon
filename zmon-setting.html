@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="css/bootstrap-select.min.css" rel="stylesheet">
+</head>
+<body>
+
+<select id="host" class="selectpicker" >
+</select>
+
+<select id="item_1" class="selectpicker">
+        <option value="system.cpu.">CPU</option>
+        <option value="vm.memory.">内存</option>
+        <option value="vfs.fs.">磁盘</option>
+        <option value="net.if.total">网卡</option>
+        <option value="perf_counter">应用程序</option>
+</select>
+
+<select id="item_2" class="selectpicker">
+    <option value="load[all,avg1]">使用率</option>
+</select>
+
+<input id="time_value" />
+
+
+<select id="time_unit" class="selectpicker">
+    <option value="60">分钟</option>
+    <option value="3600">小时</option>
+    <option value="86400">天</option>
+    <option value="604800">周</option>
+    <option value="7257600">月</option>
+</select>
+
+<button id="query">Query</button>
+
+<canvas id="chart" ></canvas>
+
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/bootstrap-select.min.js"></script>
+<script src="js/zmon.js"></script>
+<script src="js/jqzabbix.js"></script>
+<script src="js/js.cookie-2.2.0.min.js"></script>
+<script src="js/Chart.bundle.min.js"></script>
+<script>
+    $(document).ready(function () {
+        var options = {};
+        options.url = api_url;
+        options.username = api_admin;
+        options.password = api_pass;
+        var ctx = $("#chart").get(0).getContext("2d");
+        var theChart = new Chart(ctx, {
+            type: 'line',
+            data: c_data_0,
+            options: c_line_options
+        });
+        var api= new $.jqzabbix(options);
+        api.userLogin(null,function () {
+            api.sendAjaxRequest("host.get",params_host_get,function (data,status) {
+                data.result.forEach(function (host, index) {
+                    $("#host").append( "<option value='" +host.hostid + "'>" + host.host + "</option>"  );
+                });
+                $("#host").selectpicker('refresh');
+                selectedhost = $("#host").find("option:selected").val();
+                selecteditem_1 = $("#item_1").find("option:selected").val();
+                selecteditem_2 = $("#item_2").find("option:selected").val();
+                api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                    Cookies.set('selecteditem',data.result[0].itemid);
+                });
+                $("#host").selectpicker('refresh');
+                // $("#host").selectpicker('render');
+            })
+        });
+
+        $('#host').change(function () {
+            selectedhost = $(this).find("option:selected").val();
+            selecteditem_1=  $('#item_1').find("option:selected").val();
+            selecteditem_2=  $('#item_2').find("option:selected").val();
+            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                Cookies.set('selecteditem',data.result[0].itemid);
+            });
+        });
+
+        $('#item_1').change(function () {
+            selecteditem_1=  $(this).find("option:selected").val();
+            $('#item_2').empty();
+            switch (selecteditem_1) {
+                case "system.cpu.":
+                    $('#item_2').append(item2_list['system.cpu.']);
+                    break;
+                case "vm.memory.":
+                    $('#item_2').append(item2_list['vm.memory.']);
+                    break;
+                case "vfs.fs.":
+                    $('#item_2').append(item2_list['vfs.fs.']);
+                    break;
+                case "net.if.total":
+                    $('#item_2').append(item2_list['net.if.total']);
+                    break;
+                case "perf_counter":
+                    $('#item_2').append(item2_list["perf_counter"]);
+                    break;
+            }
+            $(".selectpicker").selectpicker('refresh');
+            selecteditem_2=  $('#item_2').find("option:selected").val();
+            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                Cookies.set('selecteditem',data.result[0].itemid);
+            });
+            // $("#host").selectpicker('render');
+        });
+
+        $('#item_2').change(function () {
+            selecteditem_2=  $(this).find("option:selected").val();
+            api.sendAjaxRequest('item.get',wrap_item_params(params_item_get,selectedhost,selecteditem_1,selecteditem_2),function (data,status) {
+                Cookies.set('selecteditem',data.result[0].itemid);
+            });
+        });
+
+        $('#query').click(function () {
+            if (selecteditem_2 == "size[used]" || selecteditem_2 == "[Realtek PCIe FE Family Controller]") {
+                type = 3;
+            }
+            else {
+                type = 0;
+            }
+            c_line_data.datasets[0].label= $('#item_1').find("option:selected").html() + $('#item_2').find("option:selected").html();
+            var current_time = Math.round(new Date().getTime()/1000) - 780;
+            var time_value = $('#time_value').val();
+            var time_unit = $('#time_unit').val();
+            var past_time = current_time - time_value * time_unit ;
+            api.sendAjaxRequest("history.get", wrap_histroy_params(params_history_get,Cookies.get('selecteditem'),type,past_time) ,function (data,status) {
+                //console.log(data);
+                var len = data.result.length;
+                var step = 1;
+                if(len > 20){
+                    step = len / 20;
+                }
+                indexs = range(0,len,step);
+                console.log(indexs);
+                len = indexs.length;
+                var c_line_data_t={};
+                $.extend(true, c_line_data_t, c_line_data) ;
+                indexs.forEach(function (index) {
+                    i = Math.floor(index);
+                    c_line_data_t.labels.push(timestampToTime(data.result[i].clock));
+                    console.log(data.result[i].value);
+                    c_line_data_t.datasets[0].data.push(data.result[i].value);
+                });
+                theChart.type= 'line';
+                theChart.data= c_line_data_t;
+                theChart.options = c_line_options;
+                theChart.update();
+            });
+        });
+
+
+
+    });
+</script>
+</body>
+</html>
